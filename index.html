@@ -1,136 +1,127 @@
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GIF Gallery</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GIF Gallery</title>
 
-<style>
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  padding: 20px;
-  background: #0e0e12;
-  color: white;
-  font-family: Arial, sans-serif;
-}
-
-h2 {
-  margin-bottom: 6px;
-}
-
-#status {
-  color: #999;
-  margin-bottom: 20px;
-}
-
-.gallery {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 12px;
-}
-
-.item {
-  background: #191920;
-  border-radius: 12px;
-  overflow: hidden;
-  cursor: pointer;
-  transition: transform .15s;
-}
-
-.item:active {
-  transform: scale(.96);
-}
-
-.item img {
-  width: 100%;
-  display: block;
-  object-fit: contain;
-  background: #111;
-}
-
-.name {
-  padding: 10px;
-  font-size: 13px;
-  word-break: break-word;
-}
-</style>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #0e0e12;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+    h2 { margin-bottom: 6px; }
+    #status {
+      color: #999;
+      margin-bottom: 20px;
+    }
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 14px;
+    }
+    .item {
+      background: #191920;
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform .15s;
+    }
+    .item:active { transform: scale(.96); }
+    .item img {
+      width: 100%;
+      height: 160px;
+      object-fit: contain;
+      background: #111;
+      display: block;
+    }
+    .name {
+      padding: 10px;
+      font-size: 13px;
+      word-break: break-all;
+      color: #ccc;
+    }
+  </style>
 </head>
-
 <body>
 
-<h2>GIF Gallery</h2>
-<div id="status">กำลังโหลด GIF...</div>
-<div class="gallery" id="gallery"></div>
+  <h2>GIF Gallery</h2>
+  <div id="status">กำลังโหลด...</div>
+  <div class="gallery" id="gallery"></div>
 
-<script>
-const OWNER = "YOUR_USERNAME";
-const REPO = "YOUR_REPOSITORY";
-const BRANCH = "main";
-const FOLDER = ""; // เช่น "gifs" ถ้า GIF อยู่ในโฟลเดอร์
+  <script>
+    const OWNER = "yooohubyooodev-serverscript";
+    const REPO  = "GIF";
+    const BRANCH = "main";
 
-const gallery = document.getElementById("gallery");
-const status = document.getElementById("status");
+    const gallery = document.getElementById("gallery");
+    const status  = document.getElementById("status");
 
-async function loadGIFs() {
-  try {
-    const api = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${FOLDER}?ref=${BRANCH}`;
+    // นามสกุลที่ถือว่าเป็นรูปภาพ
+    const imageExt = [".gif", ".jpg", ".jpeg", ".png", ".webp"];
 
-    const response = await fetch(api);
+    async function loadAll() {
+      try {
+        const api = `https://api.github.com/repos/\( {OWNER}/ \){REPO}/contents/?ref=${BRANCH}`;
+        const res = await fetch(api);
 
-    if (!response.ok) {
-      throw new Error("โหลด Repo ไม่สำเร็จ");
+        if (!res.ok) {
+          throw new Error("โหลด Repo ไม่สำเร็จ (status " + res.status + ")");
+        }
+
+        const files = await res.json();
+
+        // ดึงทุกไฟล์ที่เป็นรูปภาพ (รวมไฟล์ที่ขึ้นต้นด้วย .)
+        const images = files.filter(f => {
+          if (f.type !== "file") return false;
+          const name = f.name.toLowerCase();
+          return imageExt.some(ext => name.endsWith(ext));
+        });
+
+        status.textContent = `พบรูปภาพ ${images.length} ไฟล์`;
+
+        if (images.length === 0) {
+          status.textContent = "ไม่พบไฟล์รูปภาพใน repo";
+          return;
+        }
+
+        images.forEach(file => {
+          const rawURL = `https://raw.githubusercontent.com/\( {OWNER}/ \){REPO}/\( {BRANCH}/ \){file.path}`;
+
+          const item = document.createElement("div");
+          item.className = "item";
+          item.onclick = () => window.open(rawURL, "_blank");
+
+          const img = document.createElement("img");
+          img.src = rawURL;
+          img.alt = file.name;
+          img.loading = "lazy";
+
+          // ถ้าโหลดรูปไม่สำเร็จให้ซ่อน item นั้น
+          img.onerror = () => {
+            item.style.display = "none";
+          };
+
+          const name = document.createElement("div");
+          name.className = "name";
+          name.textContent = file.name;
+
+          item.appendChild(img);
+          item.appendChild(name);
+          gallery.appendChild(item);
+        });
+
+      } catch (err) {
+        status.textContent = "เกิดข้อผิดพลาด: " + err.message;
+        console.error(err);
+      }
     }
 
-    const files = await response.json();
-
-    const gifs = files.filter(file =>
-      file.type === "file" &&
-      file.name.toLowerCase().endsWith(".gif")
-    );
-
-    status.textContent = `พบ GIF ${gifs.length} ไฟล์`;
-
-    gifs.forEach(file => {
-      const rawURL = `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/${file.path}`;
-
-      const item = document.createElement("div");
-      item.className = "item";
-
-      item.onclick = () => {
-        window.location.href = rawURL;
-      };
-
-      const img = document.createElement("img");
-      img.src = rawURL;
-      img.alt = file.name;
-      img.loading = "lazy";
-
-      const name = document.createElement("div");
-      name.className = "name";
-      name.textContent = file.name;
-
-      item.appendChild(img);
-      item.appendChild(name);
-
-      gallery.appendChild(item);
-    });
-
-    if (gifs.length === 0) {
-      status.textContent = "ไม่พบ GIF ใน Repo / Folder นี้";
-    }
-
-  } catch (error) {
-    status.textContent = "เกิดข้อผิดพลาด: " + error.message;
-  }
-}
-
-loadGIFs();
-</script>
-
+    loadAll();
+  </script>
 </body>
 </html>
