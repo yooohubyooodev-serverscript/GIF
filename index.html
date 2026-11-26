@@ -4,123 +4,669 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GIF Gallery</title>
-
   <style>
     * { box-sizing: border-box; }
+    :root {
+      --bg: #0c0d12;
+      --surface: #151722;
+      --surface-2: #1d2030;
+      --border: #2a2e42;
+      --text: #f3f4f8;
+      --muted: #9aa0b4;
+      --accent: #7c5cff;
+      --accent-hover: #6a46ff;
+      --success: #22c55e;
+    }
     body {
       margin: 0;
       padding: 20px;
-      background: #0e0e12;
-      color: white;
-      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
     }
-    h2 { margin-bottom: 6px; }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    h2 {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: -0.3px;
+    }
     #status {
-      color: #999;
-      margin-bottom: 20px;
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+    .search-box {
+      flex: 1 1 240px;
+      max-width: 340px;
+    }
+    .search-box input {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+    }
+    .search-box input:focus {
+      border-color: var(--accent);
+    }
+    .categories {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .cat-btn {
+      background: var(--surface);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 7px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all .15s ease;
+    }
+    .cat-btn:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+    .cat-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 600;
     }
     .gallery {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
       gap: 14px;
     }
     .item {
-      background: #191920;
+      background: var(--surface);
+      border: 1px solid var(--border);
       border-radius: 12px;
       overflow: hidden;
       cursor: pointer;
-      transition: transform .15s;
+      transition: transform .15s, border-color .15s;
+      display: flex;
+      flex-direction: column;
     }
-    .item:active { transform: scale(.96); }
+    .item:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent);
+    }
+    .item:active { transform: scale(.97); }
     .item img {
       width: 100%;
       height: 160px;
       object-fit: contain;
-      background: #111;
+      background: #090a0f;
       display: block;
     }
-    .name {
+    .item-meta {
       padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .name {
       font-size: 13px;
+      font-weight: 600;
       word-break: break-all;
-      color: #ccc;
+      color: var(--text);
+    }
+    .sub-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .tag {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      padding: 2px 7px;
+      border-radius: 6px;
+      color: #c4c9dc;
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 6, 10, 0.82);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 1000;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      width: 100%;
+      max-width: 680px;
+      max-height: 92vh;
+      overflow-y: auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, .55);
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      gap: 10px;
+    }
+    .modal-title {
+      font-size: 16px;
+      font-weight: 700;
+      word-break: break-all;
+    }
+    .close-btn {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      font-size: 18px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .modal-preview {
+      background: #090a0f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      position: relative;
+      min-height: 220px;
+    }
+    .modal-preview img {
+      max-width: 100%;
+      max-height: 360px;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+    .nav-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(21, 23, 34, 0.85);
+      border: 1px solid var(--border);
+      color: #fff;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      font-size: 20px;
+      cursor: pointer;
+    }
+    .nav-btn.prev { left: 10px; }
+    .nav-btn.next { right: 10px; }
+    .modal-body {
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+    }
+    .info-card {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .info-label {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .info-value {
+      font-size: 13px;
+      font-weight: 600;
+      word-break: break-word;
+    }
+    .usage-box {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .usage-title {
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .usage-desc {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .copy-row {
+      display: flex;
+      gap: 8px;
+    }
+    .copy-row input {
+      flex: 1;
+      min-width: 0;
+      background: #090a0f;
+      border: 1px solid var(--border);
+      color: #d8ddf0;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 12px;
+      outline: none;
+    }
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn:hover { background: var(--accent-hover); }
+    .btn.secondary {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn.secondary:hover { border-color: var(--accent); }
+    .btn.copied { background: var(--success) !important; border-color: var(--success) !important; }
+    .quick-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 40px 16px;
+      color: var(--muted);
     }
   </style>
 </head>
 <body>
+  <div class="container">
+    <header>
+      <div>
+        <h2>GIF Gallery</h2>
+        <div id="status">กำลังโหลด...</div>
+      </div>
+      <div class="search-box">
+        <input id="searchInput" type="search" placeholder="ค้นหาชื่อไฟล์หรือหมวด (เช่น hug, kiss, slap)..." />
+      </div>
+    </header>
 
-  <h2>GIF Gallery</h2>
-  <div id="status">กำลังโหลด...</div>
-  <div class="gallery" id="gallery"></div>
+    <div class="categories" id="categories"></div>
+    <div class="gallery" id="gallery"></div>
+  </div>
+
+  <!-- Detail Modal -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <div class="modal-title" id="modalTitle">-</div>
+        <button class="close-btn" id="closeModal" aria-label="ปิด">&times;</button>
+      </div>
+      <div class="modal-preview">
+        <button class="nav-btn prev" id="prevBtn" aria-label="ก่อนหน้า">&lsaquo;</button>
+        <img id="modalImg" alt="" />
+        <button class="nav-btn next" id="nextBtn" aria-label="ถัดไป">&rsaquo;</button>
+      </div>
+      <div class="modal-body">
+        <div class="info-grid">
+          <div class="info-card">
+            <div class="info-label">ชื่อไฟล์</div>
+            <div class="info-value" id="infoName">-</div>
+          </div>
+          <div class="info-card">
+            <div class="info-label">หมวดหมู่</div>
+            <div class="info-value" id="infoCat">-</div>
+          </div>
+          <div class="info-card">
+            <div class="info-label">ขนาดไฟล์</div>
+            <div class="info-value" id="infoSize">-</div>
+          </div>
+          <div class="info-card">
+            <div class="info-label">ความละเอียด</div>
+            <div class="info-value" id="infoDim">กำลังอ่าน...</div>
+          </div>
+        </div>
+
+        <div class="usage-box">
+          <div class="usage-title">วิธีใช้ &amp; ลิงก์ Raw URL</div>
+          <div class="usage-desc">
+            กดปุ่มคัดลอกลิงก์ด้านล่างเพื่อนำไปวางใช้งานได้ทันที (เช่น ใน Discord, โปรไฟล์, Markdown หรือแท็ก <code>&lt;img src="..."&gt;</code>)
+          </div>
+          <div class="copy-row">
+            <input id="rawUrlInput" type="text" readonly />
+            <button class="btn" id="copyUrlBtn">คัดลอกลิงก์</button>
+          </div>
+          <div class="quick-actions">
+            <button class="btn secondary" id="copyHtmlBtn">Copy &lt;img&gt; HTML</button>
+            <button class="btn secondary" id="copyMdBtn">Copy Markdown</button>
+            <a class="btn secondary" id="openRawLink" target="_blank" rel="noopener noreferrer">เปิดไฟล์ต้นฉบับ ↗</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script>
     const OWNER = "yooohubyooodev-serverscript";
     const REPO  = "GIF";
     const BRANCH = "main";
+    const CACHE_KEY = "gif_gallery_cache_v1";
 
     const gallery = document.getElementById("gallery");
-    const status  = document.getElementById("status");
+    const categoriesEl = document.getElementById("categories");
+    const status = document.getElementById("status");
+    const searchInput = document.getElementById("searchInput");
 
-    // นามสกุลที่ถือว่าเป็นรูปภาพ
+    const modalBackdrop = document.getElementById("modalBackdrop");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalImg = document.getElementById("modalImg");
+    const infoName = document.getElementById("infoName");
+    const infoCat = document.getElementById("infoCat");
+    const infoSize = document.getElementById("infoSize");
+    const infoDim = document.getElementById("infoDim");
+    const rawUrlInput = document.getElementById("rawUrlInput");
+    const copyUrlBtn = document.getElementById("copyUrlBtn");
+    const copyHtmlBtn = document.getElementById("copyHtmlBtn");
+    const copyMdBtn = document.getElementById("copyMdBtn");
+    const openRawLink = document.getElementById("openRawLink");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+
     const imageExt = [".gif", ".jpg", ".jpeg", ".png", ".webp"];
+
+    const CATEGORY_RULES = [
+      { id: "hug",     label: "กอด / อ้อน (Hug & Cuddle)", match: ["hug", "cuddle"] },
+      { id: "kiss",    label: "จูบ (Kiss)",               match: ["kiss"] },
+      { id: "pat",     label: "ลูบหัว (Pat & Fluff)",      match: ["pat", "fluff"] },
+      { id: "poke",    label: "จิ้ม (Poke)",               match: ["poke", "poking"] },
+      { id: "slap",    label: "ตบ / กัด / โกรธ (Action)",  match: ["slap", "bite", "angry"] },
+      { id: "lick",    label: "เลีย / ป้อน (Lick & Feed)", match: ["lick", "feed"] },
+      { id: "emotion", label: "ยิ้ม / เขิน / ร้องไห้",     match: ["smile", "blush", "pout", "cry"] },
+      { id: "chill",   label: "เต้น / พักผ่อน (Chill)",    match: ["dance", "comfy", "lay", "tickle", "anime-lazy"] },
+      { id: "neko",    label: "เนโกะ / ตัวละคร",           match: ["neko", "eevee", "tail", "uma-musume"] },
+      { id: "general", label: "ทั่วไป / อื่นๆ",            match: [] }
+    ];
+
+    let allItems = [];
+    let filteredItems = [];
+    let activeCategory = "all";
+    let currentIndex = -1;
+
+    function detectCategory(filename) {
+      const lower = filename.toLowerCase();
+      for (const rule of CATEGORY_RULES) {
+        if (rule.match.some(prefix => lower.startsWith(prefix))) {
+          return rule;
+        }
+      }
+      return CATEGORY_RULES[CATEGORY_RULES.length - 1];
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes && bytes !== 0) return "-";
+      if (bytes < 1024) return bytes + " B";
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+      return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+    }
+
+    async function copyText(text, btn, defaultText) {
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          ta.style.position = "fixed";
+          ta.style.opacity = "0";
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          ta.remove();
+        }
+        btn.textContent = "คัดลอกแล้ว ✓";
+        btn.classList.add("copied");
+        setTimeout(() => {
+          btn.textContent = defaultText;
+          btn.classList.remove("copied");
+        }, 1600);
+      } catch {
+        rawUrlInput.select();
+      }
+    }
+
+    function openModal(index) {
+      if (index < 0 || index >= filteredItems.length) return;
+      currentIndex = index;
+      const item = filteredItems[index];
+
+      modalTitle.textContent = item.name;
+      infoName.textContent = item.name;
+      infoCat.textContent = item.category.label;
+      infoSize.textContent = formatBytes(item.size);
+      infoDim.textContent = "กำลังอ่าน...";
+
+      modalImg.onload = () => {
+        if (modalImg.naturalWidth) {
+          infoDim.textContent = `${modalImg.naturalWidth} × ${modalImg.naturalHeight} px`;
+        }
+      };
+      modalImg.src = item.rawURL;
+      modalImg.alt = item.name;
+
+      rawUrlInput.value = item.rawURL;
+      openRawLink.href = item.rawURL;
+
+      prevBtn.style.visibility = index > 0 ? "visible" : "hidden";
+      nextBtn.style.visibility = index < filteredItems.length - 1 ? "visible" : "hidden";
+
+      modalBackdrop.classList.add("open");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeModal() {
+      modalBackdrop.classList.remove("open");
+      document.body.style.overflow = "";
+    }
+
+    function renderCategories() {
+      const counts = { all: allItems.length };
+      for (const item of allItems) {
+        counts[item.category.id] = (counts[item.category.id] || 0) + 1;
+      }
+
+      categoriesEl.innerHTML = "";
+      const tabs = [{ id: "all", label: "ทั้งหมด" }, ...CATEGORY_RULES.filter(r => counts[r.id] > 0)];
+
+      tabs.forEach(tab => {
+        const btn = document.createElement("button");
+        btn.className = "cat-btn" + (activeCategory === tab.id ? " active" : "");
+        btn.textContent = `${tab.label} (${counts[tab.id] || 0})`;
+        btn.onclick = () => {
+          activeCategory = tab.id;
+          renderCategories();
+          renderGallery();
+        };
+        categoriesEl.appendChild(btn);
+      });
+    }
+
+    function renderGallery() {
+      const q = searchInput.value.trim().toLowerCase();
+      filteredItems = allItems.filter(item => {
+        const matchCat = activeCategory === "all" || item.category.id === activeCategory;
+        const matchQuery = !q ||
+          item.name.toLowerCase().includes(q) ||
+          item.category.label.toLowerCase().includes(q);
+        return matchCat && matchQuery;
+      });
+
+      status.textContent = `แสดง ${filteredItems.length} จากทั้งหมด ${allItems.length} ไฟล์ (คลิกที่รูปเพื่อดูรายละเอียดและคัดลอกลิงก์)`;
+      gallery.innerHTML = "";
+
+      if (filteredItems.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "ไม่พบไฟล์ในหมวดหมู่หรือคำค้นหานี้";
+        gallery.appendChild(empty);
+        return;
+      }
+
+      filteredItems.forEach((file, idx) => {
+        const card = document.createElement("div");
+        card.className = "item";
+        card.onclick = () => openModal(idx);
+
+        const img = document.createElement("img");
+        img.src = file.rawURL;
+        img.alt = file.name;
+        img.loading = "lazy";
+        img.onerror = () => { card.style.display = "none"; };
+
+        const meta = document.createElement("div");
+        meta.className = "item-meta";
+
+        const name = document.createElement("div");
+        name.className = "name";
+        name.textContent = file.name;
+
+        const sub = document.createElement("div");
+        sub.className = "sub-meta";
+
+        const tag = document.createElement("span");
+        tag.className = "tag";
+        tag.textContent = file.category.id === "general" ? "ทั่วไป" : file.category.id;
+
+        const size = document.createElement("span");
+        size.textContent = formatBytes(file.size);
+
+        sub.appendChild(tag);
+        sub.appendChild(size);
+        meta.appendChild(name);
+        meta.appendChild(sub);
+        card.appendChild(img);
+        card.appendChild(meta);
+        gallery.appendChild(card);
+      });
+    }
+
+    async function fetchRepoFiles() {
+      const api = `https://api.github.com/repos/${OWNER}/${REPO}/contents/?ref=${BRANCH}`;
+      try {
+        const res = await fetch(api);
+        if (!res.ok) throw new Error("status " + res.status);
+        const files = await res.json();
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), files }));
+        } catch {}
+        return files;
+      } catch (err) {
+        try {
+          const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
+          if (cached && Array.isArray(cached.files)) {
+            return cached.files;
+          }
+        } catch {}
+        throw new Error("โหลด Repo ไม่สำเร็จ (" + err.message + ")");
+      }
+    }
 
     async function loadAll() {
       try {
-        const api = `https://api.github.com/repos/${OWNER}/${REPO}/contents/?ref=${BRANCH}`;
-        const res = await fetch(api);
+        const files = await fetchRepoFiles();
+        allItems = files
+          .filter(f => {
+            if (f.type !== "file") return false;
+            const name = f.name.toLowerCase();
+            return imageExt.some(ext => name.endsWith(ext));
+          })
+          .map(f => {
+            const encodedPath = f.path.split("/").map(encodeURIComponent).join("/");
+            const rawURL = `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/${encodedPath}`;
+            return {
+              name: f.name,
+              path: f.path,
+              size: f.size,
+              rawURL,
+              category: detectCategory(f.name)
+            };
+          });
 
-        if (!res.ok) {
-          throw new Error("โหลด Repo ไม่สำเร็จ (status " + res.status + ")");
-        }
-
-        const files = await res.json();
-
-        // ดึงทุกไฟล์ที่เป็นรูปภาพ (รวมไฟล์ที่ขึ้นต้นด้วย .)
-        const images = files.filter(f => {
-          if (f.type !== "file") return false;
-          const name = f.name.toLowerCase();
-          return imageExt.some(ext => name.endsWith(ext));
-        });
-
-        status.textContent = `พบรูปภาพ ${images.length} ไฟล์`;
-
-        if (images.length === 0) {
+        if (allItems.length === 0) {
           status.textContent = "ไม่พบไฟล์รูปภาพใน repo";
           return;
         }
 
-        images.forEach(file => {
-          const encodedPath = file.path.split("/").map(encodeURIComponent).join("/");
-          const rawURL = file.download_url || `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/${encodedPath}`;
-
-          const item = document.createElement("div");
-          item.className = "item";
-          item.onclick = () => window.open(rawURL, "_blank", "noopener,noreferrer");
-
-          const img = document.createElement("img");
-          img.src = rawURL;
-          img.alt = file.name;
-          img.loading = "lazy";
-
-          // ถ้าโหลดรูปไม่สำเร็จให้ซ่อน item นั้น
-          img.onerror = () => {
-            item.style.display = "none";
-          };
-
-          const name = document.createElement("div");
-          name.className = "name";
-          name.textContent = file.name;
-
-          item.appendChild(img);
-          item.appendChild(name);
-          gallery.appendChild(item);
-        });
-
+        renderCategories();
+        renderGallery();
       } catch (err) {
         status.textContent = "เกิดข้อผิดพลาด: " + err.message;
         console.error(err);
       }
     }
+
+    searchInput.addEventListener("input", renderGallery);
+    document.getElementById("closeModal").onclick = closeModal;
+    modalBackdrop.onclick = (e) => { if (e.target === modalBackdrop) closeModal(); };
+    prevBtn.onclick = () => openModal(currentIndex - 1);
+    nextBtn.onclick = () => openModal(currentIndex + 1);
+
+    document.addEventListener("keydown", (e) => {
+      if (!modalBackdrop.classList.contains("open")) return;
+      if (e.key === "Escape") closeModal();
+      if (e.key === "ArrowLeft") openModal(currentIndex - 1);
+      if (e.key === "ArrowRight") openModal(currentIndex + 1);
+    });
+
+    copyUrlBtn.onclick = () => copyText(rawUrlInput.value, copyUrlBtn, "คัดลอกลิงก์");
+    copyHtmlBtn.onclick = () => {
+      const item = filteredItems[currentIndex];
+      if (!item) return;
+      copyText(`<img src="${item.rawURL}" alt="${item.name}">`, copyHtmlBtn, "Copy <img> HTML");
+    };
+    copyMdBtn.onclick = () => {
+      const item = filteredItems[currentIndex];
+      if (!item) return;
+      copyText(`![${item.name}](${item.rawURL})`, copyMdBtn, "Copy Markdown");
+    };
+    rawUrlInput.onclick = () => rawUrlInput.select();
 
     loadAll();
   </script>
