@@ -66,7 +66,7 @@
 
     async function loadAll() {
       try {
-        const api = `https://api.github.com/repos/\( {OWNER}/ \){REPO}/contents/?ref=${BRANCH}`;
+        const api = `https://api.github.com/repos/${OWNER}/${REPO}/contents/?ref=${BRANCH}`;
         const res = await fetch(api);
 
         if (!res.ok) {
@@ -90,11 +90,12 @@
         }
 
         images.forEach(file => {
-          const rawURL = `https://raw.githubusercontent.com/\( {OWNER}/ \){REPO}/\( {BRANCH}/ \){file.path}`;
+          const encodedPath = file.path.split("/").map(encodeURIComponent).join("/");
+          const rawURL = file.download_url || `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/${encodedPath}`;
 
           const item = document.createElement("div");
           item.className = "item";
-          item.onclick = () => window.open(rawURL, "_blank");
+          item.onclick = () => window.open(rawURL, "_blank", "noopener,noreferrer");
 
           const img = document.createElement("img");
           img.src = rawURL;
